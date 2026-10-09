@@ -1,0 +1,20 @@
+# Changelog
+
+All notable changes to this project are documented here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
+[Semantic Versioning](https://semver.org/).
+
+## [0.1.0] - 2026-10-09
+
+First public release.
+
+### Added
+
+- A row above the prompt with the host (`SSH <hostname> (<server ip>)` over SSH, the hostname
+  otherwise), a RAM-in-use bar, and 5-hour and 7-day usage-limit bars with the time to reset.
+- Green, yellow, orange and red at 70, 80 and 90 % used; the RAM bar at 30, 20 and 10 % free.
+- Stale-reading markers: a window past its reset dims to `reset`, and a dim `<age> ago` follows
+  the bars once the session's last reading is 5 minutes old.
+- The repository is its own plugin marketplace.
+
+[0.1.0]: https://github.com/RedRoosterKey/claude-code-ssh-usage-band/releases/tag/v0.1.0

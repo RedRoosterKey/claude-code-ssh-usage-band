@@ -1,0 +1,26 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # The plugin API is early access: pin the version the mod was tested with.
+      CLAUDE_CODE_VERSION: 2.1.293
+      # No login, no API calls, no telemetry: the tests run entirely offline.
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Claude Code
+        run: npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
+      - run: claude --version
+      - name: Validate
+        run: claude plugin validate .
+      - name: Test
+        run: claude plugin test .

@@ -1,0 +1,13 @@
+{
+  "name": "ssh-usage-band",
+  "description": "ssh-usage-band: host, RAM and usage limits above the Claude Code prompt",
+  "owner": {
+    "name": "RedRoosterKey"
+  },
+  "plugins": [
+    {
+      "name": "ssh-usage-band",
+      "source": "./"
+    }
+  ]
+}
