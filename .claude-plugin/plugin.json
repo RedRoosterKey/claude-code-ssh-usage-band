@@ -1,0 +1,13 @@
+{
+  "name": "ssh-usage-band",
+  "version": "0.1.0",
+  "description": "Shows the SSH host, RAM in use and your 5-hour and 7-day usage limits in a row above the prompt",
+  "author": {
+    "name": "RedRoosterKey",
+    "url": "https://github.com/RedRoosterKey"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/RedRoosterKey/claude-code-ssh-usage-band",
+  "homepage": "https://github.com/RedRoosterKey/claude-code-ssh-usage-band#readme",
+  "types": "./types/index.d.ts"
+}
