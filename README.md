@@ -83,7 +83,58 @@ resets, and that data carries no reading time.
 
 ## Install
 
-### From the marketplace (recommended)
+Install the mod where Claude Code runs:
+
+- **A remote host you use through the desktop app's SSH sessions:** install it on that host.
+  See [On a remote host](#on-a-remote-host-recommended-for-remote-hosts). This is the
+  recommended way for remote hosts.
+- **Your own computer** (terminal sessions, or the desktop app's local sessions): see
+  [On your computer](#on-your-computer).
+- **Working on the mod itself:** see [From a clone](#from-a-clone).
+
+### On a remote host (recommended for remote hosts)
+
+In the desktop app's SSH sessions, Claude Code runs on the remote host, so the mod goes there
+too. The band then shows that host's name and RAM.
+
+**Don't also install it on the computer running the desktop app.** With the mod installed in
+both places, the band doesn't show in SSH sessions. If you installed it locally, remove that
+copy first (see [Uninstall](#uninstall)).
+
+The desktop app puts its own copy of Claude Code on the host the first time you connect, under
+`~/.claude/remote/ccd-cli/` (one file per version), but not on your `PATH`. These steps use
+that copy, so the host needs nothing else installed.
+
+1. Connect to the host once from the desktop app, if you haven't yet, so that copy exists.
+2. In a terminal, SSH to the host and point `CC` at the newest version:
+
+   ```bash
+   CC=~/.claude/remote/ccd-cli/$(ls ~/.claude/remote/ccd-cli/ | sort -V | tail -1)
+   ```
+
+   Check it works. This should print a Claude Code version:
+
+   ```bash
+   "$CC" --version
+   ```
+
+3. In the same shell, add the marketplace and install:
+
+   ```bash
+   "$CC" plugin marketplace add RedRoosterKey/claude-code-ssh-usage-band
+   ```
+
+   ```bash
+   "$CC" plugin install ssh-usage-band@ssh-usage-band
+   ```
+
+4. Start a new SSH session to the host in the desktop app.
+
+Set `CC` again in each new shell. Don't point an alias or symlink at one of the `ccd-cli`
+files: the desktop app replaces them when it updates. If the host has its own `claude` on the
+`PATH`, you can use that in place of `"$CC"`.
+
+### On your computer
 
 This repository is its own plugin marketplace. In a Claude Code session in a terminal, type:
 
@@ -129,7 +180,20 @@ For every session, including ones the desktop app starts, add it to the `env` bl
 
 ## Update
 
-Installed from the marketplace:
+**On a remote host:** SSH to the host, set `CC` as in
+[On a remote host](#on-a-remote-host-recommended-for-remote-hosts), then run:
+
+```bash
+"$CC" plugin marketplace update ssh-usage-band
+```
+
+```bash
+"$CC" plugin update ssh-usage-band@ssh-usage-band
+```
+
+Then start a new SSH session in the desktop app.
+
+**On your computer:**
 
 ```bash
 claude plugin marketplace update ssh-usage-band
@@ -141,11 +205,23 @@ claude plugin update ssh-usage-band@ssh-usage-band
 
 Then run `/reload-plugins` in a session, or start a new one.
 
-From a clone: `git pull`. See [Editing the mod](#editing-the-mod) for when the change shows up.
+**From a clone:** `git pull`. See [Editing the mod](#editing-the-mod) for when the change shows
+up.
 
 ## Uninstall
 
-Installed from the marketplace:
+**On a remote host:** SSH to the host, set `CC` as in
+[On a remote host](#on-a-remote-host-recommended-for-remote-hosts), then run:
+
+```bash
+"$CC" plugin uninstall ssh-usage-band@ssh-usage-band
+```
+
+```bash
+"$CC" plugin marketplace remove ssh-usage-band
+```
+
+**On your computer:**
 
 ```bash
 claude plugin uninstall ssh-usage-band@ssh-usage-band
@@ -155,7 +231,7 @@ claude plugin uninstall ssh-usage-band@ssh-usage-band
 claude plugin marketplace remove ssh-usage-band
 ```
 
-From a clone: drop the `--plugin-dir` flag, or remove the folder from
+**From a clone:** drop the `--plugin-dir` flag, or remove the folder from
 `CLAUDE_CODE_PLUGIN_DIRS`, and start a new session.
 
 ## Development

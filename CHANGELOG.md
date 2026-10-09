@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Documentation
+
+- README: installing on the remote host, with the Claude Code copy the desktop app puts there
+  (`~/.claude/remote/ccd-cli/`), is now the recommended way for remote hosts, with matching
+  update and uninstall steps. Don't also install it on the desktop computer: installed in both
+  places, the band doesn't show in SSH sessions.
+
 ## [0.1.0] - 2026-10-09
 
 First public release.
