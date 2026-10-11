@@ -103,7 +103,8 @@ copy first (see [Uninstall](#uninstall)).
 
 The desktop app puts its own copy of Claude Code on the host the first time you connect, under
 `~/.claude/remote/ccd-cli/` (one file per version), but not on your `PATH`. These steps use
-that copy, so the host needs nothing else installed.
+that copy. Adding the marketplace from GitHub also needs `git` on the host; if it doesn't have
+it, see [Without git on the host](#without-git-on-the-host).
 
 1. Connect to the host once from the desktop app, if you haven't yet, so that copy exists.
 2. In a terminal, SSH to the host and point `CC` at the newest version:
@@ -133,6 +134,27 @@ that copy, so the host needs nothing else installed.
 Set `CC` again in each new shell. Don't point an alias or symlink at one of the `ccd-cli`
 files: the desktop app replaces them when it updates. If the host has its own `claude` on the
 `PATH`, you can use that in place of `"$CC"`.
+
+#### Without git on the host
+
+If step 3 fails with `Executable not found in $PATH: "git"`, either install git on the host
+(for example `sudo apt install git`) and run step 3 again, or download the mod with `curl` and
+add the folder as a local marketplace. In place of step 3:
+
+```bash
+mkdir -p ~/ssh-usage-band && curl -fsSL https://github.com/RedRoosterKey/claude-code-ssh-usage-band/archive/refs/heads/main.tar.gz | tar xz --strip-components=1 -C ~/ssh-usage-band
+```
+
+```bash
+"$CC" plugin marketplace add ~/ssh-usage-band
+```
+
+```bash
+"$CC" plugin install ssh-usage-band@ssh-usage-band
+```
+
+Claude Code loads the mod straight from `~/ssh-usage-band`, so keep that folder. No `curl`? Use
+`wget -qO-` in place of `curl -fsSL`.
 
 ### On your computer
 
@@ -191,6 +213,13 @@ For every session, including ones the desktop app starts, add it to the `env` bl
 "$CC" plugin update ssh-usage-band@ssh-usage-band
 ```
 
+If you installed it [without git](#without-git-on-the-host), download it again over the old
+folder instead:
+
+```bash
+rm -rf ~/ssh-usage-band && mkdir -p ~/ssh-usage-band && curl -fsSL https://github.com/RedRoosterKey/claude-code-ssh-usage-band/archive/refs/heads/main.tar.gz | tar xz --strip-components=1 -C ~/ssh-usage-band
+```
+
 Then start a new SSH session in the desktop app.
 
 **On your computer:**
@@ -220,6 +249,8 @@ up.
 ```bash
 "$CC" plugin marketplace remove ssh-usage-band
 ```
+
+If you installed it [without git](#without-git-on-the-host), also delete `~/ssh-usage-band`.
 
 **On your computer:**
 
