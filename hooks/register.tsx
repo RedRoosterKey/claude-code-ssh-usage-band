@@ -6,6 +6,7 @@ import type { Limit, Ram } from '../types'
 const limits = atom({ plugin: 'ssh-usage-band', key: 'limits' } as const, [])
 const now = atom({ plugin: 'ssh-usage-band', key: 'now' } as const, 0)
 const host = atom({ plugin: 'ssh-usage-band', key: 'host' } as const, '')
+const dir = atom({ plugin: 'ssh-usage-band', key: 'dir' } as const, '')
 const ram = atom({ plugin: 'ssh-usage-band', key: 'ram' } as const, null)
 // When the session last got a usage reading: each turn's measurement carries the
 // figures from that turn's last API response, so this is the session's last turn.
@@ -84,6 +85,14 @@ export function hostLabel(hostname: string, sshConnection: string | undefined): 
   return hostname ? `SSH ${hostname} (${serverIp})` : `SSH ${serverIp}`
 }
 
+// The home directory shortens to ~, the way a shell prompt shows it.
+export function dirLabel(path: string, home: string | undefined): string {
+  const h = home?.replace(/\/+$/, '')
+  if (!h || !path) return path
+  if (path === h) return '~'
+  return path.startsWith(`${h}/`) ? `~${path.slice(h.length)}` : path
+}
+
 export function parseMeminfo(text: string): Ram | null {
   const kb = (field: string) => Number(new RegExp(`^${field}:\\s+(\\d+) kB$`, 'm').exec(text)?.[1])
   const totalKb = kb('MemTotal')
@@ -109,6 +118,8 @@ export function ramShown(r: Ram): { usedPercent: number; color: string } {
 }
 
 export const register: Register = on => {
+  let home: string | undefined
+
   on('session.start', async ($, e, next) => {
     const hostname = await $.fs.read('/etc/hostname').then(
       text => text.trim(),
@@ -116,6 +127,10 @@ export const register: Register = on => {
     )
     const ssh = await $.env.get('SSH_CONNECTION')
     await update($, host, () => hostLabel(hostname, ssh))
+
+    home = await $.env.get('HOME')
+    const root = await $.session.root()
+    await update($, dir, () => dirLabel(root, home))
 
     // Write only when what the band draws changes, so polling doesn't redraw it.
     let drawn = ''
@@ -154,6 +169,11 @@ export const register: Register = on => {
   })
 
   on('session.measure', async ($, e, next) => {
+    // /cd moves the session's project directory without an event of its own;
+    // each turn's measurement picks it up, and the band redraws only on a change.
+    const label = dirLabel(await $.session.root(), home)
+    if (label !== (await read($, dir))) await update($, dir, () => label)
+
     // Every measurement carries the current figures, even when only the context
     // moved, so it refreshes the reading's age; the bars redraw only on a change.
     if (e.rateLimits.length > 0) {
@@ -169,8 +189,9 @@ export const register: Register = on => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const current = await read($, limits)
     const hostText = await read($, host)
+    const dirText = await read($, dir)
     const mem = await read($, ram)
-    if (e.props.hasSurvey || (current.length === 0 && !hostText && !mem)) {
+    if (e.props.hasSurvey || (current.length === 0 && !hostText && !dirText && !mem)) {
       return next(e)
     }
 
@@ -182,6 +203,7 @@ export const register: Register = on => {
     return (
       <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
         {hostText ? <Text dimColor>{hostText}</Text> : null}
+        {dirText ? <Text dimColor>{dirText}</Text> : null}
         {shown ? (
           <Box key="ram" flexDirection="row" gap={1}>
             <Text dimColor>RAM</Text>

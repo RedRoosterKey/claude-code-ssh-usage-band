@@ -3,6 +3,6 @@ export type Ram = { totalKb: number; availableKb: number }
 
 declare module 'claude-code' {
   interface PluginState {
-    'ssh-usage-band': { limits: Limit[]; now: number; host: string; ram: Ram | null; readAt: number }
+    'ssh-usage-band': { limits: Limit[]; now: number; host: string; dir: string; ram: Ram | null; readAt: number }
   }
 }
