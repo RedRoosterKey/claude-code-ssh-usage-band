@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The session's project directory, after the host: where Claude started, or where `/cd` moved
+  it, with your home directory shortened to `~`.
+
 ### Documentation
 
 - README: installing on the remote host, with the Claude Code copy the desktop app puts there

@@ -3,6 +3,7 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 import {
   colorFor,
   hasReset,
+  dirLabel,
   hostLabel,
   parseMeminfo,
   ramColorFor,
@@ -13,6 +14,7 @@ import {
 
 const SSH = '198.51.100.7 49992 192.0.2.10 22'
 const TOTAL_KB = 3885816 // MemTotal of a small (~3.7 GiB) VM
+const HOME = '/home/user'
 
 function meminfo(availableKb: number): string {
   return [
@@ -38,6 +40,14 @@ describe('helpers', () => {
     expect(hostLabel('devbox', SSH)).toBe('SSH devbox (192.0.2.10)')
     expect(hostLabel('devbox', undefined)).toBe('devbox')
     expect(hostLabel('', SSH)).toBe('SSH 192.0.2.10')
+  })
+
+  test('dirLabel shortens the home directory to ~', () => {
+    expect(dirLabel('/home/user/project', '/home/user')).toBe('~/project')
+    expect(dirLabel('/home/user', '/home/user/')).toBe('~')
+    expect(dirLabel('/home/username/project', '/home/user')).toBe('/home/username/project')
+    expect(dirLabel('/srv/app', '/home/user')).toBe('/srv/app')
+    expect(dirLabel('/srv/app', undefined)).toBe('/srv/app')
   })
 
   test('parseMeminfo', () => {
@@ -103,9 +113,9 @@ describe('helpers', () => {
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {
-  test(`${surface}: host and RAM sit left of the usage bars, color follows free RAM`, async ($, on) => {
+  test(`${surface}: host, directory and RAM sit left of the usage bars, color follows free RAM`, async ($, on) => {
     const clock = mock.clock(on, { now: Date.parse('2026-10-06T23:00:00Z') })
-    mock.env(on, { SSH_CONNECTION: SSH })
+    mock.env(on, { SSH_CONNECTION: SSH, HOME })
     let availableKb = 2763084
     on('fs.read', ($, e) => {
       if (e.path === '/etc/hostname') return { value: 'devbox\n' }
@@ -123,6 +133,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
       },
     }))
     on('session.start', ($, e) => ({ cwd: e.cwd }))
+    const root = '/home/user/project'
+    on('session.root', () => ({ value: root }))
 
     await $.session.start({ cwd: '/home/user/project', surface, isInteractive: true })
     await clock.settle()
@@ -131,6 +143,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const texts = async () => (await ui.findAll({ type: 'Text' })).map(t => t.text)
     expect(await texts()).toEqual([
       'SSH devbox (192.0.2.10)',
+      '~/project',
       'RAM',
       '██░░░░░░',
       '29%',
@@ -145,6 +158,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     ])
     expect((await ui.find({ type: 'Text', text: '29%' }))?.props.color).toBe('green')
     expect((await ui.find({ type: 'Text', text: 'SSH devbox (192.0.2.10)' }))?.props.dimColor).toBe(true)
+    expect((await ui.find({ type: 'Text', text: '~/project' }))?.props.dimColor).toBe(true)
     expect((await ui.find({ type: 'Text', text: '18%' }))?.props.color).toBe('green')
     expect((await ui.find({ type: 'Text', text: '83%' }))?.props.color).toBe('#ff8700')
 
@@ -170,7 +184,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
   test(`${surface}: an idle session dims a window past its reset, ages the reading, a turn refreshes both`, async ($, on) => {
     const clock = mock.clock(on, { now: Date.parse('2026-10-06T23:00:00Z') })
-    mock.env(on, { SSH_CONNECTION: SSH })
+    mock.env(on, { SSH_CONNECTION: SSH, HOME })
     on('fs.read', ($, e) => {
       if (e.path === '/etc/hostname') return { value: 'devbox\n' }
       if (e.path === '/proc/meminfo') return { value: meminfo(2763084) }
@@ -182,12 +196,14 @@ for (const surface of ['terminal', 'desktop'] as const) {
     ]
     on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: before } }))
     on('session.start', ($, e) => ({ cwd: e.cwd }))
+    let root = '/home/user/project'
+    on('session.root', () => ({ value: root }))
     on('session.measure', ($, e) => ({ changed: e.changed }))
 
     await $.session.start({ cwd: '/home/user/project', surface, isInteractive: true })
     await clock.settle()
     const ui = await $.ui.mount({ plugin: 'ssh-usage-band', surface, component: 'AbovePrompt', props: PROPS })
-    const usageTexts = async () => (await ui.findAll({ type: 'Text' })).map(t => t.text).slice(4)
+    const usageTexts = async () => (await ui.findAll({ type: 'Text' })).map(t => t.text).slice(5)
 
     // Fresh: no age label.
     expect(await usageTexts()).toEqual(['5h', '██████░░', '72%', '↻ 20m', '7d', '███████░', '83%', '↻ 6d'])
@@ -223,11 +239,19 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await $.session.measure({ context: { window: 200_000 }, rateLimits: after, changed: ['context'] })
     await clock.settle()
     expect(await ui.find({ type: 'Text', text: '10m ago' })).toBeUndefined()
+
+    // /cd moves the project directory; the next turn shows where it went.
+    root = '/srv/app'
+    expect(await ui.find({ type: 'Text', text: '~/project' })).toBeDefined()
+    await $.session.measure({ context: { window: 200_000 }, rateLimits: after, changed: ['context'] })
+    await clock.settle()
+    expect(await ui.find({ type: 'Text', text: '~/project' })).toBeUndefined()
+    expect(await ui.find({ type: 'Text', text: '/srv/app' })).toBeDefined()
   })
 
-  test(`${surface}: host and RAM show before any usage limits arrive`, async ($, on) => {
+  test(`${surface}: host, directory and RAM show before any usage limits arrive`, async ($, on) => {
     mock.clock(on, { now: Date.parse('2026-10-06T23:00:00Z') })
-    mock.env(on, { SSH_CONNECTION: SSH })
+    mock.env(on, { SSH_CONNECTION: SSH, HOME })
     on('fs.read', ($, e) => {
       if (e.path === '/etc/hostname') return { value: 'devbox\n' }
       if (e.path === '/proc/meminfo') return { value: meminfo(2763084) }
@@ -235,16 +259,19 @@ for (const surface of ['terminal', 'desktop'] as const) {
     })
     on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200_000 }, rateLimits: [] } }))
     on('session.start', ($, e) => ({ cwd: e.cwd }))
+    const root = '/home/user/project'
+    on('session.root', () => ({ value: root }))
 
     await $.session.start({ cwd: '/home/user/project', surface, isInteractive: true })
     const ui = await $.ui.mount({ plugin: 'ssh-usage-band', surface, component: 'AbovePrompt', props: PROPS })
 
     expect(await ui.find({ type: 'Text', text: 'SSH devbox (192.0.2.10)' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: '~/project' })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: '29%' })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: '5h' })).toBeUndefined()
   })
 
-  test(`${surface}: with no /etc/hostname or /proc/meminfo (macOS), only the usage bars show`, async ($, on) => {
+  test(`${surface}: with no /etc/hostname or /proc/meminfo (macOS), the directory and usage bars show`, async ($, on) => {
     const clock = mock.clock(on, { now: Date.parse('2026-10-06T23:00:00Z') })
     mock.env(on, {})
     on('fs.read', ($, e) => ({ deny: `no such file in this test: ${e.path}` }))
@@ -259,12 +286,14 @@ for (const surface of ['terminal', 'desktop'] as const) {
       },
     }))
     on('session.start', ($, e) => ({ cwd: e.cwd }))
+    const root = '/Users/user/project'
+    on('session.root', () => ({ value: root }))
 
     await $.session.start({ cwd: '/home/user/project', surface, isInteractive: true })
     await clock.settle()
     const ui = await $.ui.mount({ plugin: 'ssh-usage-band', surface, component: 'AbovePrompt', props: PROPS })
 
-    const usageOnly = ['5h', '█░░░░░░░', '18%', '↻ 2h 41m', '7d', '███████░', '83%', '↻ 6d']
+    const usageOnly = ['/Users/user/project', '5h', '█░░░░░░░', '18%', '↻ 2h 41m', '7d', '███████░', '83%', '↻ 6d']
     const texts = async () => (await ui.findAll({ type: 'Text' })).map(t => t.text)
     expect(await texts()).toEqual(usageOnly)
 

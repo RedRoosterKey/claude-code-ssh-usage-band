@@ -1,11 +1,11 @@
 # ssh-usage-band
 
 A [Claude Code](https://code.claude.com) mod that draws one row above the prompt: the machine
-you're on, how much of its RAM is in use, and your 5-hour and 7-day usage limits with the time
+you're on, the directory Claude is working in, how much of its RAM is in use, and your 5-hour and 7-day usage limits with the time
 until each resets.
 
 ```
-SSH devbox (192.0.2.10)  RAM ██░░░░░░ 29%  5h █░░░░░░░ 18% ↻ 2h 41m  7d ███████░ 83% ↻ 6d  25m ago
+SSH devbox (192.0.2.10)  ~/project  RAM ██░░░░░░ 29%  5h █░░░░░░░ 18% ↻ 2h 41m  7d ███████░ 83% ↻ 6d  25m ago
 ```
 
 ![ssh-usage-band above the Claude Code prompt](docs/screenshot.png)
@@ -19,14 +19,15 @@ are to a usage limit.
 | Part | Example | Where it comes from |
 | --- | --- | --- |
 | Host | `SSH devbox (192.0.2.10)` | `/etc/hostname`, and the server address (third field) of `SSH_CONNECTION`. Only the hostname when you're not on SSH. |
+| Directory | `~/project` | The session's project directory: where Claude started, or where `/cd` moved it (picked up on the next turn). Your home directory shows as `~`. |
 | RAM | `RAM ██░░░░░░ 29%` | `MemAvailable` and `MemTotal` in `/proc/meminfo`, read every 10 s. The bar fills with RAM in use. |
 | 5-hour limit | `5h █░░░░░░░ 18% ↻ 2h 41m` | The session's usage readings. `↻` is the time until the window resets. |
 | 7-day limit | `7d ███████░ 83% ↻ 6d` | The same. A day or more out it shows whole days only. |
 | Spend limit | `spend ██░░░░░░ 25% …` | Shown instead of or beside the above when you're behind a Claude apps gateway with a spend limit. |
 | Reading age | `25m ago` | Shown once the session's last usage reading is 5 minutes old or more. |
 
-The row is sized to fit on one line in a normal-width window (about 100 columns with the
-example above). In a narrower window, or with a long hostname, it wraps onto a second line.
+The row is sized to fit on one line in a normal-width window (about 110 columns with the
+example above). In a narrower window, or with a long hostname or directory, it wraps onto a second line.
 
 ### Colors
 
@@ -75,11 +76,11 @@ resets, and that data carries no reading time.
   releases.
 - **A claude.ai Pro or Max subscription** for the 5h and 7d bars. Claude Code only reports
   usage limits to subscribers (or a spend limit behind a Claude apps gateway). With API-key
-  billing there are no usage limits to show, and the row shows only the host and RAM. See
+  billing there are no usage limits to show, and the row shows only the host, directory and RAM. See
   `rate_limits` in the [status line docs](https://code.claude.com/docs/en/statusline).
 - **Linux for the host and RAM parts.** They read `/etc/hostname` and `/proc/meminfo`. On macOS
-  (and anywhere else those files don't exist) those parts are left out and only the usage bars
-  show. Over SSH into a Mac the host part shows just `SSH <server ip>`, with no hostname.
+  (and anywhere else those files don't exist) those parts are left out and only the directory and
+  usage bars show. Over SSH into a Mac the host part shows just `SSH <server ip>`, with no hostname.
 
 ## Install
 
