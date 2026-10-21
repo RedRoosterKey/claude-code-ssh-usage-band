@@ -301,4 +301,37 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await clock.advance(30_000)
     expect(await texts()).toEqual(usageOnly)
   })
+
+  test(`${surface}: when the directory can't be read, the rest of the band still shows and updates`, async ($, on) => {
+    const clock = mock.clock(on, { now: Date.parse('2026-10-06T23:00:00Z') })
+    mock.env(on, { SSH_CONNECTION: SSH, HOME })
+    on('fs.read', ($, e) => {
+      if (e.path === '/etc/hostname') return { value: 'devbox\n' }
+      if (e.path === '/proc/meminfo') return { value: meminfo(2763084) }
+      return { deny: `no such file in this test: ${e.path}` }
+    })
+    on('session.usage', () => ({
+      value: {
+        startedAt: 0,
+        context: { window: 200_000 },
+        rateLimits: [{ kind: 'five_hour', percentUsed: 18, resetsAt: '2026-10-07T01:41:00Z' }],
+      },
+    }))
+    on('session.start', ($, e) => ({ cwd: e.cwd }))
+    on('session.measure', ($, e) => ({ changed: e.changed }))
+    on('session.root', () => ({ deny: 'session.root is unavailable in this test' }))
+
+    await $.session.start({ cwd: '/home/user/project', surface, isInteractive: true })
+    await clock.settle()
+    const ui = await $.ui.mount({ plugin: 'ssh-usage-band', surface, component: 'AbovePrompt', props: PROPS })
+
+    const texts = async () => (await ui.findAll({ type: 'Text' })).map(t => t.text)
+    expect(await texts()).toEqual(['SSH devbox (192.0.2.10)', 'RAM', '██░░░░░░', '29%', '5h', '█░░░░░░░', '18%', '↻ 2h 41m'])
+
+    // A turn still brings new usage figures.
+    const after = [{ kind: 'five_hour', percentUsed: 41, resetsAt: '2026-10-07T01:41:00Z' }]
+    await $.session.measure({ context: { window: 200_000 }, rateLimits: after, changed: ['rateLimits'] })
+    await clock.settle()
+    expect(await ui.find({ type: 'Text', text: '41%' })).toBeDefined()
+  })
 }

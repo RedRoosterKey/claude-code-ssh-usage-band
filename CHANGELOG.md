@@ -4,12 +4,13 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.0] - 2026-10-20
 
 ### Added
 
 - The session's project directory, after the host: where Claude started, or where `/cd` moved
-  it, with your home directory shortened to `~`.
+  it, with your home directory shortened to `~`. If it can't be read, it's left out and the
+  rest of the row still shows.
 
 ### Documentation
 
@@ -31,4 +32,5 @@ First public release.
   the bars once the session's last reading is 5 minutes old.
 - The repository is its own plugin marketplace.
 
+[0.2.0]: https://github.com/RedRoosterKey/claude-code-ssh-usage-band/releases/tag/v0.2.0
 [0.1.0]: https://github.com/RedRoosterKey/claude-code-ssh-usage-band/releases/tag/v0.1.0
