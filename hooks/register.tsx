@@ -128,8 +128,9 @@ export const register: Register = on => {
     const ssh = await $.env.get('SSH_CONNECTION')
     await update($, host, () => hostLabel(hostname, ssh))
 
+    // A failed read leaves the directory out; the rest of the band still starts.
     home = await $.env.get('HOME')
-    const root = await $.session.root()
+    const root = await $.session.root().catch(() => '')
     await update($, dir, () => dirLabel(root, home))
 
     // Write only when what the band draws changes, so polling doesn't redraw it.
@@ -171,8 +172,12 @@ export const register: Register = on => {
   on('session.measure', async ($, e, next) => {
     // /cd moves the session's project directory without an event of its own;
     // each turn's measurement picks it up, and the band redraws only on a change.
-    const label = dirLabel(await $.session.root(), home)
-    if (label !== (await read($, dir))) await update($, dir, () => label)
+    // A failed read keeps what the band shows and doesn't hold up the usage bars.
+    const root = await $.session.root().catch(() => undefined)
+    if (root !== undefined) {
+      const label = dirLabel(root, home)
+      if (label !== (await read($, dir))) await update($, dir, () => label)
+    }
 
     // Every measurement carries the current figures, even when only the context
     // moved, so it refreshes the reading's age; the bars redraw only on a change.
